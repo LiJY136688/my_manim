@@ -25,13 +25,17 @@ __config_file__ = "custom_config.yml"
 
 def parse_cli():
     try:
+        # 对象parser，用于解析命令行参数
         parser = argparse.ArgumentParser()
+        # 互斥组module_location，用于处理互斥的参数选项
         module_location = parser.add_mutually_exclusive_group()
+        # 向互斥组中添加了一个参数选项file，指定一个文件路径，用于存放场景的Python代码
         module_location.add_argument(
             "file",
             nargs="?",
             help="Path to file holding the python code for the scene",
         )
+        # 同上，指定要查看的场景类的名称
         parser.add_argument(
             "scene_names",
             nargs="*",
