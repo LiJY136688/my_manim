@@ -50,7 +50,11 @@ if TYPE_CHECKING:
     from PIL.Image import Image
 
     from manimlib.animation.animation import Animation
-
+'''
+typing模块中的Callable、Iterable和Vect3类型以及PIL.Image模块中的Image类
+和manimlib.animation.animation模块中的Animation类只在类型检查时才会被导入，
+而在实际运行时不会被引入，从而避免了循环导入问题
+'''
 
 PAN_3D_KEY = 'd'
 FRAME_SHIFT_KEY = 'f'
@@ -71,6 +75,22 @@ class Scene(object):
     # Euler angles, in degrees
     default_frame_orientation = (0, 0)
 
+
+    ''''
+    这个构造函数用于创建一个对象，该对象包含了一系列配置参数，用于控制动画的播放和展示效果。
+    camera_config：摄像头配置参数，是一个字典，默认为空字典。
+    file_writer_config：文件写入器配置参数，是一个字典，默认为空字典。
+    skip_animations：是否跳过动画，默认为False。
+    always_update_mobjects：是否始终更新对象，默认为False。
+    start_at_animation_number：开始动画的编号，默认为None。
+    end_at_animation_number：结束动画的编号，默认为None。
+    leave_progress_bars：是否保留进度条，默认为False。
+    preview：是否预览，默认为True。
+    presenter_mode：演示者模式，默认为False。
+    show_animation_progress：是否显示动画进度，默认为False。
+    embed_exception_mode：嵌入式异常模式，默认为空字符串。
+    embed_error_sound：是否嵌入错误声音，默认为False。
+    '''
     def __init__(
         self,
         window_config: dict = dict(),
@@ -87,6 +107,9 @@ class Scene(object):
         embed_exception_mode: str = "",
         embed_error_sound: bool = False,
     ):
+        self.camera_config = {**self.default_camera_config, **camera_config}
+        self.window_config = {**self.default_window_config, **window_config}
+        
         self.skip_animations = skip_animations
         self.always_update_mobjects = always_update_mobjects
         self.start_at_animation_number = start_at_animation_number
@@ -98,8 +121,7 @@ class Scene(object):
         self.embed_exception_mode = embed_exception_mode
         self.embed_error_sound = embed_error_sound
 
-        self.camera_config = {**self.default_camera_config, **camera_config}
-        self.window_config = {**self.default_window_config, **window_config}
+
         for config in self.camera_config, self.window_config:
             config["samples"] = self.samples
         self.file_writer_config = {**self.default_file_writer_config, **file_writer_config}
