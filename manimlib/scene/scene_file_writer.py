@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from manimlib.camera.camera import Camera
     from manimlib.scene.scene import Scene
 
-
+# 用于处理场景文件写入的类，接受多个参数来配置文件的写入行为
 class SceneFileWriter(object):
     def __init__(
         self,
@@ -53,6 +53,26 @@ class SceneFileWriter(object):
         saturation: float = 1.0,
         gamma: float = 1.0,
     ):
+        # scene: 该场景的实例。
+        # write_to_movie: 是否将场景保存为视频文件。
+        # break_into_partial_movies: 是否将视频文件拆分为多个部分。
+        # save_pngs: 是否保存场景的每一帧为PNG格式图片。
+        # png_mode: PNG图片的模式。
+        # save_last_frame: 是否保存最后一帧。
+        # movie_file_extension: 视频文件的扩展名。
+        # input_file_path: 生成场景的Python文件路径。
+        # output_directory: 输出目录。
+        # file_name: 文件名。
+        # subdirectory_for_videos: 是否为视频文件创建子目录。
+        # open_file_upon_completion: 完成后是否打开文件。
+        # show_file_location_upon_completion: 是否在完成时显示文件位置。
+        # quiet: 是否安静模式，不输出信息。
+        # total_frames: 总帧数。
+        # progress_description_len: 进度描述的长度。
+        # video_codec: 视频编解码器。
+        # pixel_format: 像素格式。
+        # saturation: 饱和度。
+        # gamma: 伽马值。
         self.scene: Scene = scene
         self.write_to_movie = write_to_movie
         self.break_into_partial_movies = break_into_partial_movies
@@ -74,11 +94,16 @@ class SceneFileWriter(object):
         self.saturation = saturation
         self.gamma = gamma
 
-        # State during file writing
+        # 文件写入时的状态
+        # 处理子进程的管道
         self.writing_process: sp.Popen | None = None
+        # 显示进度
         self.progress_display: ProgressDisplay | None = None
+        # 场景是否因为中断结束，默认不会
         self.ended_with_interrupt: bool = False
+        # 初始化输出目录
         self.init_output_directories()
+        # 初始化音频
         self.init_audio()
 
     # Output directories and files
@@ -164,6 +189,8 @@ class SceneFileWriter(object):
                 POSIX path of chosenfile
                 """,
             ]
+
+            
             process = sp.Popen(cmds, stdout=sp.PIPE)
             file_path = process.stdout.read().decode("utf-8").split("\n")[0]
             if not file_path:
