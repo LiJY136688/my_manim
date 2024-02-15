@@ -55,44 +55,43 @@ typing模块中的Callable、Iterable和Vect3类型以及PIL.Image模块中的Im
 和manimlib.animation.animation模块中的Animation类只在类型检查时才会被导入，
 而在实际运行时不会被引入，从而避免了循环导入问题
 '''
-
+# 3D场景平移操作
 PAN_3D_KEY = 'd'
+# 切换场景帧
 FRAME_SHIFT_KEY = 'f'
+# 重置场景帧
 RESET_FRAME_KEY = 'r'
+# 退出交互模式
 QUIT_KEY = 'q'
 
 
 class Scene(object):
+    # 随机种子，初始为0
     random_seed: int = 0
+    # 平移灵敏度，初始为0.5
     pan_sensitivity: float = 0.5
+    # 滚动灵敏度，初始为0.5
     scroll_sensitivity: float = 20
+    # 拖动平移开关，初始打开
     drag_to_pan: bool = True
+    # 最大保存状态数，初始为50
     max_num_saved_states: int = 50
+    # 默认摄像头配置，初始为空字典
     default_camera_config: dict = dict()
+    # 默认窗口配置，初始为空字典
     default_window_config: dict = dict()
+    # 默认文件写入器配置，初始为空字典
     default_file_writer_config: dict = dict()
+    # 样本数，初始为0
     samples = 0
-    # Euler angles, in degrees
+    # 默认帧方向，欧拉角，以度为单位，初始为(0, 0)，即不进行任何旋转
     default_frame_orientation = (0, 0)
 
-
-    ''''
-    这个构造函数用于创建一个对象，该对象包含了一系列配置参数，用于控制动画的播放和展示效果。
-    camera_config：摄像头配置参数，是一个字典，默认为空字典。
-    file_writer_config：文件写入器配置参数，是一个字典，默认为空字典。
-    skip_animations：是否跳过动画，默认为False。
-    always_update_mobjects：是否始终更新对象，默认为False。
-    start_at_animation_number：开始动画的编号，默认为None。
-    end_at_animation_number：结束动画的编号，默认为None。
-    leave_progress_bars：是否保留进度条，默认为False。
-    preview：是否预览，默认为True。
-    presenter_mode：演示者模式，默认为False。
-    show_animation_progress：是否显示动画进度，默认为False。
-    embed_exception_mode：嵌入式异常模式，默认为空字符串。
-    embed_error_sound：是否嵌入错误声音，默认为False。
-    '''
+    # 创建一个Scene场景对象，该对象包含了一系列配置参数，用于控制动画的播放和展示效果。
     def __init__(
         self,
+        # camera_config：摄像头配置参数，是一个字典，默认为空字典。
+        # file_writer_config：文件写入器配置参数，是一个字典，默认为空字典。
         window_config: dict = dict(),
         camera_config: dict = dict(),
         file_writer_config: dict = dict(),
@@ -107,9 +106,20 @@ class Scene(object):
         embed_exception_mode: str = "",
         embed_error_sound: bool = False,
     ):
+        # 将默认相机配置和传入的相机配置合并，确保所有参数都被正确设置
         self.camera_config = {**self.default_camera_config, **camera_config}
+        # 将默认窗口配置和传入的窗口配置合并，以便在创建窗口时使用这些配置
         self.window_config = {**self.default_window_config, **window_config}
-        
+        # skip_animations：是否跳过动画，默认为False。
+        # always_update_mobjects：是否始终更新对象，默认为False。
+        # start_at_animation_number：开始动画的编号，默认为None。
+        # end_at_animation_number：结束动画的编号，默认为None。
+        # leave_progress_bars：是否保留进度条，默认为False。
+        # preview：是否预览，默认为True。
+        # presenter_mode：演示者模式，默认为False。
+        # show_animation_progress：是否显示动画进度，默认为False。
+        # embed_exception_mode：嵌入式异常模式，默认为空字符串。
+        # embed_error_sound：是否嵌入错误声音，默认为False。
         self.skip_animations = skip_animations
         self.always_update_mobjects = always_update_mobjects
         self.start_at_animation_number = start_at_animation_number
@@ -121,26 +131,47 @@ class Scene(object):
         self.embed_exception_mode = embed_exception_mode
         self.embed_error_sound = embed_error_sound
 
-
+        # 为相机配置、窗口配置和文件写入器配置设置一些默认值
         for config in self.camera_config, self.window_config:
+            # 控制渲染时的采样级别，影响渲染质量
             config["samples"] = self.samples
+        # 将文件写入器配置更新为默认文件写入器配置和传入的文件写入器配置的组合。这里使用了字典解包（**）的方式将两个配置合并
         self.file_writer_config = {**self.default_file_writer_config, **file_writer_config}
 
-        # Initialize window, if applicable
+        # 是否需要预览场景
         if self.preview:
             from manimlib.window import Window
+            # 将当前场景传递给窗口对象，将窗口配置传递给窗口对象的构造函数
             self.window = Window(scene=self, **self.window_config)
+            # 将窗口对象添加到相机配置参数中，以便在渲染时使用
             self.camera_config["window"] = self.window
-            self.camera_config["fps"] = 30  # Where's that 30 from?
+            # 相机的帧率为30帧每秒
+            self.camera_config["fps"] = 30  # 30从哪里来的？
         else:
+            # 如果不需要预览场景，则没有窗口对象
             self.window = None
 
-        # Core state of the scene
+        # 场景类的核心状态定义，包括摄像头、帧、文件写入器等。
+        # 这些状态记录了场景的基本信息和状态，用于控制场景的展示和交互。
+        # camera：摄像头对象，用于控制场景的视角和视野。
+        # frame：摄像头的帧，描述了场景中物体的位置和视角。
+        # 根据字典中的配置信息创建一个相机对象
         self.camera: Camera = Camera(**self.camera_config)
+        # 获取相机的帧对象
         self.frame: CameraFrame = self.camera.frame
+        # 将相机帧的方向设置为默认帧方向
         self.frame.reorient(*self.default_frame_orientation)
+        # 将当前方向设置为默认方向
         self.frame.make_orientation_default()
-
+        # file_writer：文件写入器，用于将场景渲染为视频或图片。
+        # mobjects：场景中的物体列表，包括摄像头帧和其他添加的物体。
+        # render_groups：渲染组，用于控制物体的渲染顺序和分组。
+        # id_to_mobject_map：物体ID映射表，记录了物体和其对应的ID的关系。
+        # num_plays：场景播放次数计数器。
+        # time：场景播放的时间。
+        # skip_time：跳过动画的时间。
+        # original_skipping_status：初始跳过动画的状态。
+        # checkpoint_states：场景状态检查点，记录了场景的历史状态。
         self.file_writer = SceneFileWriter(self, **self.file_writer_config)
         self.mobjects: list[Mobject] = [self.camera.frame]
         self.render_groups: list[Mobject] = []
@@ -150,25 +181,33 @@ class Scene(object):
         self.skip_time: float = 0
         self.original_skipping_status: bool = self.skip_animations
         self.checkpoint_states: dict[str, list[tuple[Mobject, Mobject]]] = dict()
+        # undo_stack和redo_stack：撤销和重做栈，用于撤销和重做操作。
         self.undo_stack = []
         self.redo_stack = []
 
+        # 如果在场景配置中指定了开始动画的序号，则在渲染场景时会跳过前面的动画，直接从指定序号开始播放动画
         if self.start_at_animation_number is not None:
             self.skip_animations = True
+        # 如果场景配置中指定了显示进度条，则不显示动画进度条
         if self.file_writer.has_progress_display():
             self.show_animation_progress = False
 
-        # Items associated with interaction
+        # 一些交互相关物件
+        # 鼠标的当前位置
         self.mouse_point = Point()
+        # 鼠标拖拽的起始位置
         self.mouse_drag_point = Point()
+        # 是否在演示者模式下暂停场景，否，则不暂停
         self.hold_on_wait = self.presenter_mode
+        # 是否退出交互模式，否，则继续交互
         self.quit_interaction = False
 
-        # Much nicer to work with deterministic scenes
+        # # 设置随机数生成的种子，以确保在需要确定性行为的场景中能够重现相同的结果
         if self.random_seed is not None:
             random.seed(self.random_seed)
             np.random.seed(self.random_seed)
-
+            
+    # 返回了场景类的类名
     def __str__(self) -> str:
         return self.__class__.__name__
 
@@ -208,22 +247,23 @@ class Scene(object):
         if self.window:
             self.window.destroy()
             self.window = None
-
+            
+    # 与场景进行交互
     def interact(self) -> None:
-        """
-        If there is a window, enter a loop
-        which updates the frame while under
-        the hood calling the pyglet event loop
-        """
+        # 如果没有窗口则直接返回
         if self.window is None:
             return
+        # 使用按键d、f或z与场景交互，按下command + q或esc退出
         log.info(
             "\nTips: Using the keys `d`, `f`, or `z` " +
             "you can interact with the scene. " +
             "Press `command + q` or `esc` to quit"
         )
+        # 不会跳过动画
         self.skip_animations = False
+        # 在窗口没有关闭的情况下不断更新帧
         while not self.is_window_closing():
+            # 更新帧，参数为每秒帧数的倒数
             self.update_frame(1 / self.camera.fps)
 
     def embed(
@@ -1035,18 +1075,25 @@ class SceneState():
             for mob, mob_copy in self.mobjects_to_copies.items()
         ]
 
-
+# 在某些场景结束时捕获该异常并执行一些清理工作或者切换到下一个场景
 class EndScene(Exception):
     pass
 
-
+# 创建一个三维场景
 class ThreeDScene(Scene):
+    # 渲染三维对象时用于采样的数量。增加采样数量可以提高图像质量，但也会增加计算量和渲染时间
     samples = 4
+    # 默认的摄像头视角，是一个二元组，表示摄像头的旋转角度，通常用来调整场景的初始视角
     default_frame_orientation = (-30, 70)
+    # 是否始终启用深度测试
     always_depth_test = True
-
+    # 向场景中添加三维对象
     def add(self, *mobjects, set_depth_test: bool = True):
+        # 遍历所有传入的物体 mobjects，检查是否需要对深度进行测试
         for mob in mobjects:
+            # 如果 set_depth_test 为 True，并且物体 mob 不是固定在帧中的，并且 always_depth_test 属性为 True:
             if set_depth_test and not mob.is_fixed_in_frame() and self.always_depth_test:
+                # 则调用 mob.apply_depth_test() 方法对物体应用深度测试
                 mob.apply_depth_test()
+        # 将所有物体添加到场景中
         super().add(*mobjects)
