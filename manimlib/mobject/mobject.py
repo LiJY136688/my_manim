@@ -518,33 +518,53 @@ class Mobject(object):
         self.set_submobjects(list_update(self.submobjects, mobject_attrs))
         return self
 
-    # Submobject organization
+    # 子对象组织
 
+    # 排列
     def arrange(
         self,
+        # 子对象排列的方向，默认为右方向
         direction: Vect3 = RIGHT,
+        # 是否居中排列，默认居中排列
         center: bool = True,
+        # 其他参数
         **kwargs
     ) -> Self:
+        # 遍历子对象
         for m1, m2 in zip(self.submobjects, self.submobjects[1:]):
+            # 子对象的下一个子对象
             m2.next_to(m1, direction, **kwargs)
+        # 如果需要居中
         if center:
+            # 居中
             self.center()
         return self
 
+    # 将子对象以网格形式排列
     def arrange_in_grid(
         self,
+        # 网格的行数，默认为None
         n_rows: int | None = None,
+        # 网格的列数，默认为None
         n_cols: int | None = None,
+        # 子对象之间的间距，默认为None
         buff: float | None = None,
+        # 子对象水平方向的间距，默认为None
         h_buff: float | None = None,
+        # 子对象垂直方向的间距，默认为None
         v_buff: float | None = None,
+        # 子对象之间的间距比例，默认为None
         buff_ratio: float | None = None,
+        # 子对象水平方向的间距比例，默认为0.5
         h_buff_ratio: float = 0.5,
+        # 子对象垂直方向的间距比例，默认为0.5
         v_buff_ratio: float = 0.5,
+        # 子对象的对齐方向，默认为ORIGIN
         aligned_edge: Vect3 = ORIGIN,
+        # 是否填充网格，默认为True，先填满行再填充列
         fill_rows_first: bool = True
     ) -> Self:
+
         submobs = self.submobjects
         if n_rows is None and n_cols is None:
             n_rows = int(np.sqrt(len(submobs)))
@@ -1075,103 +1095,168 @@ class Mobject(object):
             ))
         return self
 
-    # Positioning methods
+    # 方向与定位
 
+    # 将物体移动到场景的中心位置
     def center(self) -> Self:
+        # 获取物体的中心位置，将物体向其相反方向平移，使其移动到场景的中心位置
         self.shift(-self.get_center())
         return self
 
+    # 将物体沿着指定方向对齐到边界
     def align_on_border(
         self,
+        # 指定对齐的方向向量
         direction: Vect3,
+        # 指定对齐时的间距，默认采用默认间距
         buff: float = DEFAULT_MOBJECT_TO_EDGE_BUFFER
     ) -> Self:
-        """
-        Direction just needs to be a vector pointing towards side or
-        corner in the 2d plane.
-        """
+        # “方向”只需要是一个指向二维平面上某一侧面或角落的向量即可
+        # 计算目标点
         target_point = np.sign(direction) * (FRAME_X_RADIUS, FRAME_Y_RADIUS, 0)
+        # 获取物体边界框上指定方向上的点
         point_to_align = self.get_bounding_box_point(direction)
+        # 计算需要平移的距离
         shift_val = target_point - point_to_align - buff * np.array(direction)
+        # 根据direction的符号调整平移向量的方向
         shift_val = shift_val * abs(np.sign(direction))
+        # 将物体按计算得到的平移向量移动
         self.shift(shift_val)
         return self
 
+    # 将物体对齐到指定角落
     def to_corner(
         self,
+        # 指定要对齐到的角落，默认为左下角
         corner: Vect3 = LEFT + DOWN,
+        # 间距，默认为默认对象间距离
         buff: float = DEFAULT_MOBJECT_TO_EDGE_BUFFER
     ) -> Self:
         return self.align_on_border(corner, buff)
 
+    # 将物体对齐到指定边缘
     def to_edge(
         self,
+        # 指定要对齐到的边缘，默认为左边缘
         edge: Vect3 = LEFT,
+        # 指定对齐时的间距，默认为默认对象间距离
         buff: float = DEFAULT_MOBJECT_TO_EDGE_BUFFER
     ) -> Self:
         return self.align_on_border(edge, buff)
 
+    # 将对象移动到另一个对象
     def next_to(
         self,
+        # 移动到的对象，一个对象或者一个点
         mobject_or_point: Mobject | Vect3,
+        # 移动方向，默认向右
         direction: Vect3 = RIGHT,
+        # 间距，采用默认对象间距离
         buff: float = DEFAULT_MOBJECT_TO_MOBJECT_BUFFER,
+        # 对齐的边，默认为ORIGIN
         aligned_edge: Vect3 = ORIGIN,
+        # 传入一个子对象，默认为None
         submobject_to_align: Mobject | None = None,
+        # 传入一个子对象的索引，默认为None
         index_of_submobject_to_align: int | slice | None = None,
+        # 传入一个坐标掩码，默认为np.array([1, 1, 1])
         coor_mask: Vect3 = np.array([1, 1, 1]),
     ) -> Self:
+        # 如果移动到的对象是Mobject对象
         if isinstance(mobject_or_point, Mobject):
+            # 获取移动到的对象
             mob = mobject_or_point
+            # 如果对齐子对象的索引不为空
             if index_of_submobject_to_align is not None:
+                # 则获取目标对齐器
                 target_aligner = mob[index_of_submobject_to_align]
             else:
+                # 如果未提供索引，则使用整个Mobject作为目标对齐器
                 target_aligner = mob
-            target_point = target_aligner.get_bounding_box_point(
-                aligned_edge + direction
-            )
+            # 根据对齐边缘和方向，获取目标对齐点
+            target_point = target_aligner.get_bounding_box_point(aligned_edge + direction)
+        # 如果移动到的对象是坐标点，则直接将其作为目标点
         else:
             target_point = mobject_or_point
+        # 确定对齐器
         if submobject_to_align is not None:
+            # 如果提供了待对齐的子对象，则使用其作为对齐器
             aligner = submobject_to_align
         elif index_of_submobject_to_align is not None:
+            # 如果未提供待对齐的子对象但提供了索引，则使用相应子对象作为对齐器
             aligner = self[index_of_submobject_to_align]
         else:
+            # 如果既未提供待对齐的子对象也未提供索引，则使用整个Mobject作为对齐器
             aligner = self
+        # 获取待对齐点，根据对齐边缘和方向对齐器进行计算得到
         point_to_align = aligner.get_bounding_box_point(aligned_edge - direction)
+        # 移动Mobject，使目标点与待对齐点对齐，并考虑缓冲距离（buff * direction）
         self.shift((target_point - point_to_align + buff * direction) * coor_mask)
         return self
 
+    # 将物体移动到屏幕内部
     def shift_onto_screen(self, **kwargs) -> Self:
+        # 定义了场景的长度和宽度
         space_lengths = [FRAME_X_RADIUS, FRAME_Y_RADIUS]
+        # 遍历上、下、左、右四个方向
         for vect in UP, DOWN, LEFT, RIGHT:
+            # 获取向量中绝对值最大的分量所在的维度
             dim = np.argmax(np.abs(vect))
+            # 获取缓冲区间距，如果未指定则使用默认值
             buff = kwargs.get("buff", DEFAULT_MOBJECT_TO_EDGE_BUFFER)
+            # 计算在当前维度上可以移动的最大值
             max_val = space_lengths[dim] - buff
+            # 获取沿着当前方向的边缘中心点
             edge_center = self.get_edge_center(vect)
+            # 检查当前边缘中心点是否超出了屏幕范围
             if np.dot(edge_center, vect) > max_val:
+                # 如果超出了屏幕范围，则将物体对齐到当前方向的边缘
                 self.to_edge(vect, **kwargs)
         return self
 
+    # 判断物体是否在超出屏幕范围
     def is_off_screen(self) -> bool:
+        # 如果物体最左边的点的x坐标大于FRAME_X_RADIUS，则超出
         if self.get_left()[0] > FRAME_X_RADIUS:
             return True
+        # 如果物体最右边的点的x坐标小于-FRAME_X_RADIUS，则超出
         if self.get_right()[0] < -FRAME_X_RADIUS:
             return True
+        # 如果物体最下边的点的x坐标大于FRAME_Y_RADIUS，则超出
         if self.get_bottom()[1] > FRAME_Y_RADIUS:
             return True
+        # 如果物体最上边的点的x坐标小于-FRAME_Y_RADIUS，则超出
         if self.get_top()[1] < -FRAME_Y_RADIUS:
             return True
+        # 均不超出
         return False
 
-    def stretch_about_point(self, factor: float, dim: int, point: Vect3) -> Self:
+    # 围绕指定点按照指定因子进行拉伸
+    def stretch_about_point(self, 
+        # 拉伸因子
+        factor: float, 
+        # 拉伸的维度
+        dim: int, 
+        # 围绕的点
+        point: Vect3
+        ) -> Self:
         return self.stretch(factor, dim, about_point=point)
 
-    def stretch_in_place(self, factor: float, dim: int) -> Self:
-        # Now redundant with stretch
+    # 在原地按照指定因子进行拉伸
+    def stretch_in_place(self, 
+        factor: float, 
+        dim: int
+        ) -> Self:
+        # 目前已经被stretch方法取代
         return self.stretch(factor, dim)
 
-    def rescale_to_fit(self, length: float, dim: int, stretch: bool = False, **kwargs) -> Self:
+    # 将物体按照指定维度的长度重新缩放到指定长度
+    def rescale_to_fit(self, 
+        length: float, 
+        dim: int, 
+        stretch: bool = False, 
+        **kwargs
+        ) -> Self:
         old_length = self.length_over_dim(dim)
         if old_length == 0:
             return self
@@ -2071,84 +2156,112 @@ class Mobject(object):
             shader_wrapper.pre_render()
             shader_wrapper.render()
 
-    # Event Handlers
-    """
-        Event handling follows the Event Bubbling model of DOM in javascript.
-        Return false to stop the event bubbling.
-        To learn more visit https://www.quirksmode.org/js/events_order.html
+    # 事件处理
+    
+    # 该函数是一个事件处理函数，它遵循JavaScript中DOM的事件冒泡模型。
+    # 它接受一个可调用函数作为回调参数。
+    # 该函数接受两个参数：一个Mobject对象和一个EventData对象。
+    # 如果回调函数返回false，则事件冒泡将停止。
+    # 参见https://www.quirksmode.org/js/events_order.html
 
-        Event Callback Argument is a callable function taking two arguments:
-            1. Mobject
-            2. EventData
-    """
-
+    # 初始化事件监听器
     def init_event_listners(self):
+        # 创建一个空的事件监听器列表
         self.event_listners: list[EventListener] = []
 
+    # 添加事件监听器
     def add_event_listner(
         self,
+        # 事件类型
         event_type: EventType,
+        # 事件回调函数
         event_callback: Callable[[Mobject, dict[str]]]
     ):
+        # 创建一个事件监听器
         event_listner = EventListener(self, event_type, event_callback)
+        # 添加到事件监听器列表中
         self.event_listners.append(event_listner)
+        # 将事件监听器添加到事件分发器中
         EVENT_DISPATCHER.add_listner(event_listner)
         return self
 
+    # 移除事件监听器
     def remove_event_listner(
         self,
+        # 事件类型
         event_type: EventType,
+        # 事件回调函数
         event_callback: Callable[[Mobject, dict[str]]]
     ):
+        # 创建一个事件监听器
         event_listner = EventListener(self, event_type, event_callback)
+        # 从事件监听器列表中移除事件监听器
         while event_listner in self.event_listners:
             self.event_listners.remove(event_listner)
+        # 
         EVENT_DISPATCHER.remove_listner(event_listner)
         return self
 
+    # 清空事件监听器
     def clear_event_listners(self, recurse: bool = True):
+        # 清空事件监听器列表
         self.event_listners = []
         if recurse:
             for submob in self.submobjects:
                 submob.clear_event_listners(recurse=recurse)
         return self
 
+    # 获取事件监听器
     def get_event_listners(self):
         return self.event_listners
 
+    # 获取事件监听器的家族
     def get_family_event_listners(self):
         return list(it.chain(*[sm.get_event_listners() for sm in self.get_family()]))
 
+    # 判断是否有事件监听器
     def get_has_event_listner(self):
+        # 遍历事件监听器列表
         return any(
+            # 判断是否有事件监听器
             mob.get_event_listners()
+            # 遍历事件监听器的家族
             for mob in self.get_family()
         )
 
+    # 添加鼠标移动监听器
     def add_mouse_motion_listner(self, callback):
         self.add_event_listner(EventType.MouseMotionEvent, callback)
 
+    # 移除鼠标移动监听器
     def remove_mouse_motion_listner(self, callback):
         self.remove_event_listner(EventType.MouseMotionEvent, callback)
 
+    # 添加鼠标按下监听器
     def add_mouse_press_listner(self, callback):
         self.add_event_listner(EventType.MousePressEvent, callback)
 
+    # 移除鼠标按下监听器
     def remove_mouse_press_listner(self, callback):
         self.remove_event_listner(EventType.MousePressEvent, callback)
 
+    # 添加鼠标释放监听器
     def add_mouse_release_listner(self, callback):
         self.add_event_listner(EventType.MouseReleaseEvent, callback)
 
+    # 移除鼠标释放监听器
     def remove_mouse_release_listner(self, callback):
         self.remove_event_listner(EventType.MouseReleaseEvent, callback)
 
+    # 添加鼠标拖拽监听器
     def add_mouse_drag_listner(self, callback):
         self.add_event_listner(EventType.MouseDragEvent, callback)
 
+    # 移除鼠标拖拽监听器
     def remove_mouse_drag_listner(self, callback):
         self.remove_event_listner(EventType.MouseDragEvent, callback)
 
+    # 
     def add_mouse_scroll_listner(self, callback):
         self.add_event_listner(EventType.MouseScrollEvent, callback)
 
@@ -2176,46 +2289,67 @@ class Mobject(object):
             caller_name = sys._getframe(1).f_code.co_name
             raise Exception(message.format(caller_name))
 
-
+# 组类
 class Group(Mobject):
+    # 组类的构造方法
     def __init__(self, *mobjects: Mobject, **kwargs):
+        # 检查所有子对象是否为数学对象
         if not all([isinstance(m, Mobject) for m in mobjects]):
-            raise Exception("All submobjects must be of type Mobject")
+            # 抛出异常
+            raise Exception("所有子对象必须为Mobject类型")
+        # 使用父类的构造方法
         Mobject.__init__(self, **kwargs)
+        # 添加子对象
         self.add(*mobjects)
         if any(m.is_fixed_in_frame() for m in mobjects):
+            # 
             self.fix_in_frame()
-
+    # 向当前组类中添加另一个数学对象或组对象
     def __add__(self, other: Mobject | Group) -> Self:
+        # 判断外来者是否为数学对象
         assert(isinstance(other, Mobject))
+        # 返回当前组对象
         return self.add(other)
 
-
+# 点类
 class Point(Mobject):
+    # 点类的构造方法
     def __init__(
         self,
+        # 点的坐标，默认为ORIGIN
         location: Vect3 = ORIGIN,
+        # 点的宽度，默认为1e-6
         artificial_width: float = 1e-6,
+        # 点的高度，默认为1e-6
         artificial_height: float = 1e-6,
+        # 其他关键字参数
         **kwargs
     ):
+        # 点的宽度和高度
         self.artificial_width = artificial_width
         self.artificial_height = artificial_height
+        # 调用父类Mobject的构造方法
         super().__init__(**kwargs)
+        # 设置点的位置
         self.set_location(location)
 
+    # 获取点的宽度
     def get_width(self) -> float:
         return self.artificial_width
 
+    # 获取点的高度
     def get_height(self) -> float:
         return self.artificial_height
 
+    # 获取点的位置，三维向量
     def get_location(self) -> Vect3:
         return self.get_points()[0].copy()
-
+        
+    # 获取包围盒的点，即返回点的位置，三维向量
     def get_bounding_box_point(self, *args, **kwargs) -> Vect3:
         return self.get_location()
-
+        
+    # 设置点的位置，即设置点的顶点坐标为new_loc
     def set_location(self, new_loc: npt.ArrayLike) -> Self:
         self.set_points(np.array(new_loc, ndmin=2, dtype=float))
         return self
@@ -2239,66 +2373,82 @@ class _AnimationBuilder:
         # 标记是否可以传递参数给动画方法，默认可以
         self.can_pass_args = True
 
+    # 在访问实例属性时动态地获取属性值，method_name 表示要访问的属性名
     def __getattr__(self, method_name: str):
+        # 获取self.mobject.target对象的属性method_name
         method = getattr(self.mobject.target, method_name)
+        # 获取到的属性 method 添加到self.methods列表中
         self.methods.append(method)
+        # 检查获取到的属性method是否具有_override_animate属性，如果有则将其赋值给has_overridden_animation
         has_overridden_animation = hasattr(method, "_override_animate")
-
+        # 检查是否存在方法链和是否存在被覆盖的动画
         if (self.is_chaining and has_overridden_animation) or self.overridden_animation:
+            # 如果是则抛出NotImplementedError异常
             raise NotImplementedError(
-                "Method chaining is currently not supported for " + \
-                "overridden animations"
+                "目前不支持被覆盖动画的方法链"
             )
-
+        # 更新动画的目标对象
         def update_target(*method_args, **method_kwargs):
+            # 检查是否存在已被覆盖的动画
             if has_overridden_animation:
-                self.overridden_animation = method._override_animate(
-                    self.mobject, *method_args, **method_kwargs
-                )
+                # 如果存在，将已被覆盖的动画添加到动画构造器
+                self.overridden_animation = method._override_animate(self.mobject, *method_args, **method_kwargs)
             else:
+                # 如果不存在，调用原始方法，更新动画的属性或状态
                 method(*method_args, **method_kwargs)
+            # 返回动画构造器
             return self
-
+        # 方法链正在进行中
         self.is_chaining = True
+        # 返回目标更新函数
         return update_target
 
+    # 对象实例可以像函数一样被调用，接受任意关键字参数kwargs
     def __call__(self, **kwargs):
+        # 然后将这些关键字参数传递给set_anim_args方法，并返回对象实例本身
         return self.set_anim_args(**kwargs)
 
+    # 设置动画构造器的动画参数
     def set_anim_args(self, **kwargs):
-        '''
-        可以更改 :class:`~manimlib.animation.transform.Transform` 的参数，比如：
-        - ``run_time``
-        - ``time_span``
-        - ``rate_func``
-        - ``lag_ratio``
-        - ``path_arc``
-        - ``path_func``
-        等等
-        '''
-
+        # 可以更改 :class:`~manimlib.animation.transform.Transform` 的参数，比如：
+        # - ``run_time``（运行时间）
+        # - ``time_span``（时间跨度）
+        # - ``rate_func``（缓动函数，控制动画的速度变化）
+        # - ``lag_ratio``（延迟比例，用于控制动画的延迟）
+        # - ``path_arc``（路径弧度，用于指定动画对象在运动过程中的路径弧度）
+        # - ``path_func``（路径函数，用于控制动画对象在运动过程中的路径形状）
+        # 等等
+        # 如果不允许传递参数，说明已经设置过动画参数，
         if not self.can_pass_args:
+            # 抛出ValueError异常
             raise ValueError(
-                "Animation arguments can only be passed by calling ``animate`` " + \
-                "or ``set_anim_args`` and can only be passed once",
+                "动画参数只能通过调用 'animate' 或 'set_anim_args' 来传递，且只能被传递一次"
             )
-
+        # 动画参数设置为传入的参数
         self.anim_args = kwargs
+        # 已经设置过动画参数，不允许再次传递
         self.can_pass_args = False
+        # 返回该动画构造器
         return self
 
+    # 构建动画构造器
     def build(self):
         from manimlib.animation.transform import _MethodAnimation
-
+        # 如果存在被覆盖的动画对象，则返回该动画对象
         if self.overridden_animation:
             return self.overridden_animation
-
+        # 否则，根据动画构造器的各项信息创建一个新的动画对象
         return _MethodAnimation(self.mobject, self.methods, **self.anim_args)
 
-
+# 通过使用@override_animate装饰器，可以在定义动画方法时指定一个重写的动画方法
+# 这样，在调用动画方法时，实际执行的将是重写的动画方法
+# 重写动画方法的装饰器函数
 def override_animate(method):
+    # 装饰一个动画方法
     def decorator(animation_method):
+        # 将该动画方法赋值给重写动画
         method._override_animate = animation_method
+        # 返回动画方法
         return animation_method
-
+    # 返回用于装饰需要重写的动画方法
     return decorator
