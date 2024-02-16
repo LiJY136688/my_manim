@@ -2220,15 +2220,23 @@ class Point(Mobject):
         self.set_points(np.array(new_loc, ndmin=2, dtype=float))
         return self
 
-
+# 动画构造器类
 class _AnimationBuilder:
+    # 动画构造器类的构造方法
     def __init__(self, mobject: Mobject):
+        # 保存传入的Mobject对象
         self.mobject = mobject
+        # 保存要覆盖的动画，默认为空
         self.overridden_animation = None
+        # 生成动画的目标状态，用于后续动画效果的计算
         self.mobject.generate_target()
+        # 标记是否正在链式调用动画方法，默认没有
         self.is_chaining = False
+        # 保存要调用的动画方法，默认为空列表
         self.methods: list[Callable] = []
+        # 保存动画方法的参数，默认为空字典
         self.anim_args = {}
+        # 标记是否可以传递参数给动画方法，默认可以
         self.can_pass_args = True
 
     def __getattr__(self, method_name: str):
@@ -2259,16 +2267,14 @@ class _AnimationBuilder:
 
     def set_anim_args(self, **kwargs):
         '''
-        You can change the args of :class:`~manimlib.animation.transform.Transform`, such as
-
+        可以更改 :class:`~manimlib.animation.transform.Transform` 的参数，比如：
         - ``run_time``
         - ``time_span``
         - ``rate_func``
         - ``lag_ratio``
         - ``path_arc``
         - ``path_func``
-
-        and so on.
+        等等
         '''
 
         if not self.can_pass_args:
