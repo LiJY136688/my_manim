@@ -43,18 +43,14 @@ from manimlib.utils.iterables import batch_by_property
 
 from typing import TYPE_CHECKING
 
+# 在静态类型检查时导入所需的模块和类型
 if TYPE_CHECKING:
     from typing import Callable, Iterable
     from manimlib.typing import Vect3
-
     from PIL.Image import Image
-
     from manimlib.animation.animation import Animation
-'''
-typing模块中的Callable、Iterable和Vect3类型以及PIL.Image模块中的Image类
-和manimlib.animation.animation模块中的Animation类只在类型检查时才会被导入，
-而在实际运行时不会被引入，从而避免了循环导入问题
-'''
+
+
 # 3D场景平移操作
 PAN_3D_KEY = 'd'
 # 切换场景帧
@@ -90,36 +86,40 @@ class Scene(object):
     # 创建一个Scene场景对象，该对象包含了一系列配置参数，用于控制动画的播放和展示效果。
     def __init__(
         self,
-        # camera_config：摄像头配置参数，是一个字典，默认为空字典。
-        # file_writer_config：文件写入器配置参数，是一个字典，默认为空字典。
+        # 窗口配置参数，默认为空字典
         window_config: dict = dict(),
+        # 摄像头配置参数，默认为空字典
         camera_config: dict = dict(),
+        # 文件写入器配置参数，默认为空字典
         file_writer_config: dict = dict(),
+        # 是否跳过动画，默认为False
         skip_animations: bool = False,
+        # 是否始终更新对象，默认为False
         always_update_mobjects: bool = False,
+        # 开始动画的编号，默认为None
         start_at_animation_number: int | None = None,
+        # 结束动画的编号，默认为None
         end_at_animation_number: int | None = None,
+        # 是否保留进度条，默认为False
         leave_progress_bars: bool = False,
+        # 是否预览，默认为True
         preview: bool = True,
+        # 演示者模式，默认为False
         presenter_mode: bool = False,
+        # 是否显示动画进度，默认为False
         show_animation_progress: bool = False,
+        # 嵌入式异常模式，默认为空字符串
         embed_exception_mode: str = "",
+        # 是否嵌入错误声音，默认为False
         embed_error_sound: bool = False,
     ):
-        # 将默认相机配置和传入的相机配置合并，确保所有参数都被正确设置
-        self.camera_config = {**self.default_camera_config, **camera_config}
-        # 将默认窗口配置和传入的窗口配置合并，以便在创建窗口时使用这些配置
+        # 将默认窗口配置和传入的窗口配置合并
         self.window_config = {**self.default_window_config, **window_config}
-        # skip_animations：是否跳过动画，默认为False。
-        # always_update_mobjects：是否始终更新对象，默认为False。
-        # start_at_animation_number：开始动画的编号，默认为None。
-        # end_at_animation_number：结束动画的编号，默认为None。
-        # leave_progress_bars：是否保留进度条，默认为False。
-        # preview：是否预览，默认为True。
-        # presenter_mode：演示者模式，默认为False。
-        # show_animation_progress：是否显示动画进度，默认为False。
-        # embed_exception_mode：嵌入式异常模式，默认为空字符串。
-        # embed_error_sound：是否嵌入错误声音，默认为False。
+        # 将默认相机配置和传入的相机配置合并
+        self.camera_config = {**self.default_camera_config, **camera_config}
+        # 将默认文件写入器配置和传入的文件写入器配置合并
+        self.file_writer_config = {**self.default_file_writer_config, **file_writer_config}
+        # 依次代入各项参数
         self.skip_animations = skip_animations
         self.always_update_mobjects = always_update_mobjects
         self.start_at_animation_number = start_at_animation_number
@@ -135,8 +135,6 @@ class Scene(object):
         for config in self.camera_config, self.window_config:
             # 控制渲染时的采样级别，影响渲染质量
             config["samples"] = self.samples
-        # 将文件写入器配置更新为默认文件写入器配置和传入的文件写入器配置的组合。这里使用了字典解包（**）的方式将两个配置合并
-        self.file_writer_config = {**self.default_file_writer_config, **file_writer_config}
 
         # 是否需要预览场景
         if self.preview:
@@ -163,25 +161,25 @@ class Scene(object):
         self.frame.reorient(*self.default_frame_orientation)
         # 将当前方向设置为默认方向
         self.frame.make_orientation_default()
-        # file_writer：文件写入器，用于将场景渲染为视频或图片。
-        # mobjects：场景中的物体列表，包括摄像头帧和其他添加的物体。
-        # render_groups：渲染组，用于控制物体的渲染顺序和分组。
-        # id_to_mobject_map：物体ID映射表，记录了物体和其对应的ID的关系。
-        # num_plays：场景播放次数计数器。
-        # time：场景播放的时间。
-        # skip_time：跳过动画的时间。
-        # original_skipping_status：初始跳过动画的状态。
-        # checkpoint_states：场景状态检查点，记录了场景的历史状态。
+        # 文件写入器，用于将场景渲染为视频或图片。
         self.file_writer = SceneFileWriter(self, **self.file_writer_config)
+        # 场景中的物体列表，包括摄像头帧和其他添加的物体
         self.mobjects: list[Mobject] = [self.camera.frame]
+        # 渲染组，用于控制物体的渲染顺序和分组
         self.render_groups: list[Mobject] = []
+        # 物体ID映射表，记录了物体和其对应的ID的关系
         self.id_to_mobject_map: dict[int, Mobject] = dict()
+        # 场景播放次数计数器
         self.num_plays: int = 0
+        # 场景播放的时间
         self.time: float = 0
+        # 跳过动画的时间
         self.skip_time: float = 0
+        # 初始跳过动画的状态
         self.original_skipping_status: bool = self.skip_animations
+        # 场景状态检查点，记录场景的历史状态
         self.checkpoint_states: dict[str, list[tuple[Mobject, Mobject]]] = dict()
-        # undo_stack和redo_stack：撤销和重做栈，用于撤销和重做操作。
+        # 撤销和重做栈，用于撤销和重做操作
         self.undo_stack = []
         self.redo_stack = []
 
@@ -207,48 +205,58 @@ class Scene(object):
             random.seed(self.random_seed)
             np.random.seed(self.random_seed)
             
-    # 返回了场景类的类名
+    # 获取场景类名
     def __str__(self) -> str:
         return self.__class__.__name__
 
+    # 运行动画
     def run(self) -> None:
+        # 动画开始的虚拟时间
         self.virtual_animation_start_time: float = 0
+        # 动画开始的真实时间
         self.real_animation_start_time: float = time.time()
+        # 开始写入动画的帧到文件中，生成视频文件
         self.file_writer.begin()
-
+        # 准备动画的执行环境
         self.setup()
+        # 监视异常
         try:
+            # 构建动画
             self.construct()
+            # 交互响应
             self.interact()
+        # 结束场景，跳过
         except EndScene:
             pass
+        # 键盘中断键
         except KeyboardInterrupt:
-            # Get rid keyboard interupt symbols
+            # 清除中断键内容（如清除'^C'字样）
             print("", end="\r")
+            # 动画以键盘中断的方式结束
             self.file_writer.ended_with_interrupt = True
+        # 执行动画结束的清理工作，如释放资源或关闭文件
         self.tear_down()
 
+    # 接口方法，必须由子类重写
     def setup(self) -> None:
-        """
-        This is meant to be implement by any scenes which
-        are comonly subclassed, and have some common setup
-        involved before the construct method is called.
-        """
         pass
-
+        
+    # 所有动画发生的地方，也是个接口方法
     def construct(self) -> None:
-        # Where all the animation happens
-        # To be implemented in subclasses
         pass
-
+        
+    # 结束后的清理工作
     def tear_down(self) -> None:
+        # 停止跳过动画
         self.stop_skipping()
+        # 完成文件写入操作
         self.file_writer.finish()
+        # 如果窗口存在，则销毁窗口并释放引用，以便回收
         if self.window:
             self.window.destroy()
             self.window = None
             
-    # 与场景进行交互
+    # 场景交互
     def interact(self) -> None:
         # 如果没有窗口则直接返回
         if self.window is None:
@@ -266,35 +274,53 @@ class Scene(object):
             # 更新帧，参数为每秒帧数的倒数
             self.update_frame(1 / self.camera.fps)
 
+    # 嵌入动画
     def embed(
         self,
+        # 在退出时是否关闭场景，默认要关闭
         close_scene_on_exit: bool = True,
+        # 是否显示动画进度，默认不显示
         show_animation_progress: bool = False,
     ) -> None:
+        # 只有在有预览时才需要嵌入动画
         if not self.preview:
-            return  # Embed is only relevant with a preview
+            # 如果不预览，跳过
+            return  
+        # 停止跳过动画设置
         self.stop_skipping()
+        # 更新当前帧的内容
         self.update_frame()
+        # 保存当前动画状态
         self.save_state()
+        # 控制是否显示动画进度
         self.show_animation_progress = show_animation_progress
 
-        # Create embedded IPython terminal to be configured
+        # 创建一个嵌入式的IPython终端
         shell = InteractiveShellEmbed.instance()
-
-        # Use the locals namespace of the caller
+        # 获取当前函数调用栈的前一帧
         caller_frame = inspect.currentframe().f_back
+        # 将调用者的局部命名空间转换为字典，以便在嵌入的IPython终端中使用
         local_ns = dict(caller_frame.f_locals)
 
-        # Add a few custom shortcuts
+        # 将一些自定义的快捷方式添加到了嵌入的IPython终端中
         local_ns.update(
+            # 播放动画
             play=self.play,
+            # 等待一段时间
             wait=self.wait,
+            # 向场景中添加物体
             add=self.add,
+            # 从场景中移除物体
             remove=self.remove,
+            # 清空场景
             clear=self.clear,
+            # 保存场景的状态
             save_state=self.save_state,
+            # 撤销操作
             undo=self.undo,
+            # 重做操作
             redo=self.redo,
+            # 
             i2g=self.i2g,
             i2m=self.i2m,
             checkpoint_paste=self.checkpoint_paste,
