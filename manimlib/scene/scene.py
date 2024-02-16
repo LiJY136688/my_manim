@@ -424,30 +424,41 @@ class Scene(object):
         if not self.skip_animations:
             self.file_writer.write_frame(self.camera)
 
-    # Related to updating
+    # 更新相关
 
+    # 更新场景中的所有物体
     def update_mobjects(self, dt: float) -> None:
+        # 遍历场景中的每个物体
         for mobject in self.mobjects:
+            # 传递时间增量实现物体的更新
             mobject.update(dt)
 
+    # 检查是否应该更新物体
     def should_update_mobjects(self) -> bool:
+        # 如果要总是更新，则更新
         return self.always_update_mobjects or any([
+            # 否则，检查场景中每个物体是否有与时间相关的更新器
             len(mob.get_family_updaters()) > 0
+            # 如果有任何一个物体有时间相关的更新器，则更新，否则不更新
             for mob in self.mobjects
         ])
 
+    # 检查场景中是否有与时间相关的更新器
     def has_time_based_updaters(self) -> bool:
         return any([
+            # 遍历场景中的每个物体及其子物体，检查是否有任何一个更新器与时间相关
             sm.has_time_based_updater()
             for mob in self.mobjects()
             for sm in mob.get_family()
         ])
 
-    # Related to time
+    # 时间相关
 
+    # 获取场景当前时间
     def get_time(self) -> float:
         return self.time
 
+    # 实现对时间的增量操作
     def increment_time(self, dt: float) -> None:
         self.time += dt
 
@@ -591,13 +602,18 @@ class Scene(object):
             return VGroup(*mobjects)
         else:
             return Group(*mobjects)
-
+            
+    # 根据一个ID值返回所对应的物体对象
     def id_to_mobject(self, id_value):
         return self.id_to_mobject_map[id_value]
 
+    # 根据多个ID值返回所对应的多个物体对象所组成的组对象
     def ids_to_group(self, *id_values):
+        # 遍历ID列表中的每个ID值
         return self.get_group(*filter(
+            # 如果ID值不为None
             lambda x: x is not None,
+            # 则将对应的物体对象添加到mobjects列表中，并将mobjects列表中的物体对象作为参数传递给get_group方法，以创建组对象
             map(self.id_to_mobject, id_values)
         ))
         
@@ -608,8 +624,9 @@ class Scene(object):
     def i2m(self, id_value):
         return self.id_to_mobject(id_value)
 
-    # Related to skipping
+    # 跳过相关
 
+    # 
     def update_skipping_status(self) -> None:
         if self.start_at_animation_number is not None:
             if self.num_plays == self.start_at_animation_number:
@@ -624,8 +641,9 @@ class Scene(object):
         self.virtual_animation_start_time = self.time
         self.skip_animations = False
 
-    # Methods associated with running animations
+    # 运行动画相关
 
+    # 
     def get_time_progression(
         self,
         run_time: float,
@@ -832,79 +850,106 @@ class Scene(object):
         if len(self.undo_stack) > self.max_num_saved_states:
             self.undo_stack.pop(0)
 
+    # 撤销操作
     def undo(self):
         if self.undo_stack:
             self.redo_stack.append(self.get_state())
             self.restore_state(self.undo_stack.pop())
 
+    # 重做操作
     def redo(self):
         if self.redo_stack:
             self.undo_stack.append(self.get_state())
             self.restore_state(self.redo_stack.pop())
 
+    # 在交互式开发过程中运行（或重新运行）一个场景代码块
     def checkpoint_paste(
         self,
+        # 默认不跳过
         skip: bool = False,
+        # 默认不记录
         record: bool = False,
+        # 默认加进度条
         progress_bar: bool = True
     ):
-        """
-        Used during interactive development to run (or re-run)
-        a block of scene code.
-
-        If the copied selection starts with a comment, this will
-        revert to the state of the scene the first time this function
-        was called on a block of code starting with that comment.
-        """
+        # 获取当前的IPython shell对象
         shell = get_ipython()
+        # 如果shell或window为空，则抛出异常，表示无法在非IPython shell环境或没有窗口的情况下调用此方法
         if shell is None or self.window is None:
             raise Exception(
-                "Scene.checkpoint_paste cannot be called outside of " +
-                "an ipython shell"
+                "Scene.checkpoint_paste cannot be called outside of an ipython shell"
             )
-
+        # 从剪贴板中获取内容
         pasted = pyperclip.paste()
+        # 获取pasted的第一行内容，并将其存储在变量line0中。lstrip()用于删除字符串开头的空格和换行符
         line0 = pasted.lstrip().split("\n")[0]
+        # 如果第一行内容以#开头
         if line0.startswith("#"):
+            # 如果以#开头的第一行内容不在字典中
             if line0 not in self.checkpoint_states:
+                # 则将以该行内容为键的检查点状态保存到self.checkpoint_states字典中
                 self.checkpoint(line0)
             else:
+                # 否则将场景恢复到以该行内容为键的检查点状态
                 self.revert_to_checkpoint(line0)
-
+                
+        # 保存当前的跳过动画设置
         prev_skipping = self.skip_animations
+        # 跳过动画设置为skip指定的值
         self.skip_animations = skip
-
+        # 保存当前的显示动画进度设置
         prev_progress = self.show_animation_progress
+        # 显示动画进度设置为progress_bar指定的值
         self.show_animation_progress = progress_bar
-
+        
+        # 如果有记录
         if record:
+            # 禁用窗口帧缓冲区
             self.camera.use_window_fbo(False)
+            # 开始录制动画
             self.file_writer.begin_insert()
-
+            
+        # 在IPython shell中运行剪贴板中的代码块
         shell.run_cell(pasted)
-
+        
+        # 如果有记录
         if record:
+            # 结束录制动画
             self.file_writer.end_insert()
+            # 重新启用窗口帧缓冲区
             self.camera.use_window_fbo(True)
-
+            
+        # 恢复先前保存的跳过动画设置
         self.skip_animations = prev_skipping
+        # 恢复先前保存的显示动画进度设置
         self.show_animation_progress = prev_progress
 
+    # 将当前场景状态保存为一个检查点
     def checkpoint(self, key: str):
+        # 以key为键，以当前场景状态为值
         self.checkpoint_states[key] = self.get_state()
-
+        
+    # 将场景恢复到之前保存的某个检查点的状态
     def revert_to_checkpoint(self, key: str):
+        # 若key不存在，即没有找到对应的检查点
         if key not in self.checkpoint_states:
+            # 报错
             log.error(f"No checkpoint at {key}")
             return
+        # 将self.checkpoint_states字典中所有的键（即检查点的标识）转换为列表
         all_keys = list(self.checkpoint_states.keys())
+        # 获取key在列表中的索引，即找到指定检查点在所有检查点中的位置
         index = all_keys.index(key)
+        # 遍历all_keys列表中从index+1开始的所有元素，这些元素表示比指定检查点更新的检查点
         for later_key in all_keys[index + 1:]:
+            # 移除比指定检查点更新的所有检查点，保留指定检查点及之前的检查点
             self.checkpoint_states.pop(later_key)
-
+        # 将场景恢复到指定检查点的状态
         self.restore_state(self.checkpoint_states[key])
-
+        
+    # 清除所有的检查点
     def clear_checkpoints(self):
+        # 将self.checkpoint_states字典清空，重新开始记录新的检查点
         self.checkpoint_states = dict()
 
     def save_mobject_to_file(self, mobject: Mobject, file_path: str | None = None) -> None:
