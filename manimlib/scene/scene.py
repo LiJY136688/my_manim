@@ -320,8 +320,9 @@ class Scene(object):
             undo=self.undo,
             # 重做操作
             redo=self.redo,
-            # 
+            # ID转Group操作
             i2g=self.i2g,
+            # ID转Mobject操作
             i2m=self.i2m,
             checkpoint_paste=self.checkpoint_paste,
         )
@@ -599,10 +600,11 @@ class Scene(object):
             lambda x: x is not None,
             map(self.id_to_mobject, id_values)
         ))
-
+        
+    # 将传入的多个ID值作为参数，转换为一个组对象（Group）
     def i2g(self, *id_values):
         return self.ids_to_group(*id_values)
-
+    # 将传入的ID值转换为一个物体对象（Mobject）
     def i2m(self, id_value):
         return self.id_to_mobject(id_value)
 
