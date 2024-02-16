@@ -57,33 +57,43 @@ if TYPE_CHECKING:
     NonTimeUpdater = Callable[["Mobject"], "Mobject" | None]
     Updater = Union[TimeBasedUpdater, NonTimeUpdater]
 
-
+# 数学对象类
 class Mobject(object):
-    """
-    Mathematical Object
-    """
+    # 数学对象的维度，默认为3维
     dim: int = 3
+    # 用于此数学对象的着色器文件夹的路径，默认为空字符串
     shader_folder: str = ""
+    # 渲染时使用的图元类型
     render_primitive: int = moderngl.TRIANGLE_STRIP
-    # Must match in attributes of vert shader
+    # 顶点着色器的数据类型，必须与垂直着色器的属性匹配
     shader_dtype: np.dtype = np.dtype([
+        # 顶点的位置（三维坐标）
         ('point', np.float32, (3,)),
+        # 颜色（四维RGBA值）
         ('rgba', np.float32, (4,)),
     ])
+    # 对齐数据键
     aligned_data_keys = ['point']
+    # 点类似数据键
     pointlike_data_keys = ['point']
 
+    # 数学对象类的初始化方法
     def __init__(
         self,
+        # 颜色，默认为WHITE
         color: ManimColor = WHITE,
+        # 不透明度，默认为1.0
         opacity: float = 1.0,
+        # 阴影颜色，默认为(0.0, 0.0, 0.0)
         shading: Tuple[float, float, float] = (0.0, 0.0, 0.0),
-        # For shaders
+        # 纹理路径，不同部分使用不同的纹理，默认为空字典
         texture_paths: dict[str, str] | None = None,
-        # If true, the mobject will not get rotated according to camera position
+        # 是否固定在帧中，默认不会随着相机位置的旋转而旋转
         is_fixed_in_frame: bool = False,
+        # 是否进行深度测试，默认不进行
         depth_test: bool = False,
     ):
+        # 依次代入各项参数
         self.color = color
         self.opacity = opacity
         self.shading = shading
@@ -91,70 +101,111 @@ class Mobject(object):
         self._is_fixed_in_frame = is_fixed_in_frame
         self.depth_test = depth_test
 
-        # Internal state
+        # 内部状态
+        # 当前对象的所有子对象，默认为空字典
         self.submobjects: list[Mobject] = []
+        # 当前对象的所有父对象，默认为空字典
         self.parents: list[Mobject] = []
+        # 当前对象及其所有相关对象组成的对象组，默认为只有自己的字典
         self.family: list[Mobject] = [self]
+        # 锁定的数据键集合，表示不能修改的数据键，默认为空集合
         self.locked_data_keys: set[str] = set()
+        # 常量数据键集合，表示不会在运行时更改的数据键，默认为空集合
         self.const_data_keys: set[str] = set()
+        # 锁定的统一键集合，表示不能修改的统一键，默认为空集合
         self.locked_uniform_keys: set[str] = set()
+        # 是否需要计算新的边界框，默认需要
         self.needs_new_bounding_box: bool = True
+        # 对象是否正在进行动画，默认没有
         self._is_animating: bool = False
+        # 保存的对象状态，默认还没东西
         self.saved_state = None
+        # 对象的目标状态，默认还没东西
         self.target = None
+        # 对象的边界框，默认为3×3的零矩阵
         self.bounding_box: Vect3Array = np.zeros((3, 3))
+        # 着色器是否已初始化，默认还没有
         self._shaders_initialized: bool = False
+        # 数据是否已更改，默认已更改
         self._data_has_changed: bool = True
+        # 着色器代码替换字典，用于替换着色器中的代码，默认为空字典
         self.shader_code_replacements: dict[str, str] = dict()
 
+        # 初始化对象的数据
         self.init_data()
+        # 初始化对象的默认数据为一个值为1的数组，数组长度为1，数据类型与对象的数据类型一致
         self._data_defaults = np.ones(1, dtype=self.data.dtype)
+        # 初始化对象的统一键
         self.init_uniforms()
+        # 初始化对象的更新器
         self.init_updaters()
+        # 初始化对象的事件监听器
         self.init_event_listners()
+        # 初始化对象的点
         self.init_points()
+        # 初始化对象的颜色
         self.init_colors()
 
+        # 如果需要深度测试
         if self.depth_test:
+            # 就进行深度测试
             self.apply_depth_test()
 
+    # 获取对象的类名
     def __str__(self):
         return self.__class__.__name__
 
+    # 对象之间的合并或组合
     def __add__(self, other: Mobject) -> Mobject:
         assert(isinstance(other, Mobject))
+        # 创建一个新的群组对象，包含对象自身和新加入的对象
         return self.get_group_class()(self, other)
 
+    # 对象自身的复制或重复
     def __mul__(self, other: int) -> Mobject:
         assert(isinstance(other, int))
+        # 根据整数多少复制几个对象
         return self.replicate(other)
 
+    # 初始化对象的数据
     def init_data(self, length: int = 0):
+        # 创建一个指定长度的全零数组
         self.data = np.zeros(length, dtype=self.shader_dtype)
 
+    # 初始化对象的统一键
     def init_uniforms(self):
         self.uniforms: UniformDict = {
+            # 是否固定在帧中
             "is_fixed_in_frame": float(self._is_fixed_in_frame),
+            # 对象的阴影效果
             "shading": np.array(self.shading, dtype=float),
         }
-
+        
+    # 初始化对象的颜色
     def init_colors(self):
+        # 根据对象的颜色和不透明度设置其颜色
         self.set_color(self.color, self.opacity)
 
+    # 初始化对象的点，子类中实现
     def init_points(self):
-        # Typically implemented in subclass, unlpess purposefully left blank
         pass
 
+    # 设置对象的统一键
     def set_uniforms(self, uniforms: dict) -> Self:
+        # 遍历uniforms字典的每个键值对
         for key, value in uniforms.items():
+            # 如果值是NumPy数组
             if isinstance(value, np.ndarray):
+                # 创建其副本以避免修改原数组
                 value = value.copy()
+            # 将键值对添加到统一键键值对属性中
             self.uniforms[key] = value
         return self
 
+    # @property用于将一个方法转换为属性，使得可以像访问属性一样访问该方法
     @property
+    # 构建对象的动画
     def animate(self) -> _AnimationBuilder:
-        # Borrowed from https://github.com/ManimCommunity/manim/
         return _AnimationBuilder(self)
 
     def note_changed_data(self, recurse_up: bool = True) -> Self:
