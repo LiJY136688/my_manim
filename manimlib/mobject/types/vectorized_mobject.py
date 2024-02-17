@@ -1488,22 +1488,36 @@ class DashedVMobject(VMobject):
         self.match_style(vmobject, recurse=False)
 
 
+# 高亮效果
 class VHighlight(VGroup):
+    # 创建一个具有渐变描边的高亮效果
     def __init__(
         self,
+        # 要高亮的对象
         vmobject: VMobject,
+        # 高亮的层数，默认为5
         n_layers: int = 5,
+        # 渐变的颜色范围
         color_bounds: Tuple[ManimColor] = (GREY_C, GREY_E),
+        # 最大描边增加量，默认为5
         max_stroke_addition: float = 5.0,
     ):
+        # 复制 vmobject 对象存储在 outline 变量中
         outline = vmobject.replicate(n_layers)
+        # 设置 outline 中所有对象的填充不透明度为 0，即不显示填充
         outline.set_fill(opacity=0)
+        # 生成一个数组，表示每一层的描边增加量，从 0 到 max_stroke_addition 均匀分布，长度为 n_layers + 1，然后去掉第一个元素（0）
         added_widths = np.linspace(0, max_stroke_addition, n_layers + 1)[1:]
+        # 根据 color_bounds 定义的颜色范围和 n_layers 层数，生成一个渐变的颜色列表
         colors = color_gradient(color_bounds, n_layers)
+        # 使用 zip 函数将 outline、added_widths 和 colors 逐一组合，其中 reversed(outline) 是为了从外到内依次处理每一层
         for part, added_width, color in zip(reversed(outline), added_widths, colors):
+            # 对每个 part 的家族成员（family member）进行迭代处理，确保对所有包含的子对象应用相同的描边和颜色设置
             for sm in part.family_members_with_points():
+                # 设置每个子对象的描边宽度为原始宽度加上对应层的增量，并设置颜色为对应的渐变色
                 sm.set_stroke(
                     width=sm.get_stroke_width() + added_width,
                     color=color,
                 )
+        # 调用父类 VGroup 的构造函数，创建了一个包含所有复制对象的组  
         super().__init__(*outline)
