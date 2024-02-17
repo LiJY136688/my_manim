@@ -204,48 +204,61 @@ class TipableVMobject(VMobject):
         start, end = self.get_start_and_end()
         return get_norm(start - end)
 
-
+# 圆弧形状的图形类
 class Arc(TipableVMobject):
     def __init__(
         self,
+        # 起始角度
         start_angle: float = 0,
+        # 角度范围
         angle: float = TAU / 4,
+        # 半径
         radius: float = 1.0,
+        # 组件数量
         n_components: int = 8,
+        # 圆弧中心点
         arc_center: Vect3 = ORIGIN,
         **kwargs
     ):
         super().__init__(**kwargs)
-
+        # 使用quadratic_bezier_points_for_arc函数生成表示弧形的点的列表，并将其设置为弧形的点集
+        # 该函数生成一系列点，这些点可以用于近似表示一个弧
         self.set_points(quadratic_bezier_points_for_arc(angle, n_components))
+        # 围绕原点（ORIGIN）将弧形按给定的起始角度start_angle旋转。这可能用于使弧形从其初始角度开始
         self.rotate(start_angle, about_point=ORIGIN)
+        # 以原点为中心，按给定的半径radius缩放弧形。这会调整弧形的大小，使其具有指定的半径
         self.scale(radius, about_point=ORIGIN)
+        # 将弧形移动到指定的中心点arc_center。这会将弧形的位置移动到指定的中心位置，以便在画布上正确定位
         self.shift(arc_center)
 
+    # 获取中心点
     def get_arc_center(self) -> Vect3:
-        """
-        Looks at the normals to the first two
-        anchors, and finds their intersection points
-        """
-        # First two anchors and handles
+        # 首先获取圆弧的前两个锚点和它们对应的锚点
         a1, h, a2 = self.get_points()[:3]
-        # Tangent vectors
+        # 计算出这两个点的切线向量
         t1 = h - a1
         t2 = h - a2
-        # Normals
+        # 根据切线向量计算出法向量，即切线向量旋转90度
         n1 = rotate_vector(t1, TAU / 4)
         n2 = rotate_vector(t2, TAU / 4)
+        # 求出法向量的交点即为圆弧的中心点
         return find_intersection(a1, n1, a2, n2)
 
+    # 获取起始角度
     def get_start_angle(self) -> float:
+        # 圆弧起点到圆心的向量计算出角度，并将结果归一化到0到2π之间
         angle = angle_of_vector(self.get_start() - self.get_arc_center())
         return angle % TAU
 
+    # 获取结束角度
     def get_stop_angle(self) -> float:
+        # 圆弧终点到圆心的向量计算出角度，并将结果归一化到0到2π之间
         angle = angle_of_vector(self.get_end() - self.get_arc_center())
         return angle % TAU
 
+    # 移动圆弧中心点到指定位置
     def move_arc_center_to(self, point: Vect3) -> Self:
+        # 通过平移操作，将圆弧的中心点移动到指定的位置
         self.shift(point - self.get_arc_center())
         return self
 
