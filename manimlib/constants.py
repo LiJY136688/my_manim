@@ -7,92 +7,118 @@ if TYPE_CHECKING:
     from manimlib.typing import ManimColor, Vect3
 
 
-# Sizes relevant to default camera frame
+# 与相机帧相关的默认属性
+# 屏幕的宽高比
 ASPECT_RATIO: float = 16.0 / 9.0
+# 相机帧的宽度
 FRAME_HEIGHT: float = 8.0
+# 相机帧的高度
 FRAME_WIDTH: float = FRAME_HEIGHT * ASPECT_RATIO
+# 相机帧的尺寸
 FRAME_SHAPE: tuple[float, float] = (FRAME_WIDTH, FRAME_HEIGHT)
+# 相机帧的中心
 FRAME_Y_RADIUS: float = FRAME_HEIGHT / 2
 FRAME_X_RADIUS: float = FRAME_WIDTH / 2
-
+# 默认的像素宽高
 DEFAULT_PIXEL_HEIGHT: int = 1080
 DEFAULT_PIXEL_WIDTH: int = 1920
+# 默认的帧率
 DEFAULT_FPS: int = 30
-
+# 最小的缩放系数
 SMALL_BUFF: float = 0.1
+# 中小的缩放系数
 MED_SMALL_BUFF: float = 0.25
+# 中大的缩放系数
 MED_LARGE_BUFF: float = 0.5
+# 最大的缩放系数
 LARGE_BUFF: float = 1
-
+# 默认的mobject与屏幕边缘的距离
 DEFAULT_MOBJECT_TO_EDGE_BUFFER: float = MED_LARGE_BUFF
+# 默认的mobject与mobject之间的距离
 DEFAULT_MOBJECT_TO_MOBJECT_BUFFER: float = MED_SMALL_BUFF
 
-
-# In seconds
+# 默认等待时间，以秒为单位
 DEFAULT_WAIT_TIME: float = 1.0
 
-
+# 三维空间中的原点位置
 ORIGIN: Vect3 = np.array([0., 0., 0.])
+
+# 分别表示三维空间中的上、下、右、左、内、外方向的单位向量
 UP: Vect3 = np.array([0., 1., 0.])
 DOWN: Vect3 = np.array([0., -1., 0.])
 RIGHT: Vect3 = np.array([1., 0., 0.])
 LEFT: Vect3 = np.array([-1., 0., 0.])
 IN: Vect3 = np.array([0., 0., -1.])
 OUT: Vect3 = np.array([0., 0., 1.])
+
+# 分别表示三维空间中的X轴、Y轴、Z轴的单位向量
 X_AXIS: Vect3 = np.array([1., 0., 0.])
 Y_AXIS: Vect3 = np.array([0., 1., 0.])
 Z_AXIS: Vect3 = np.array([0., 0., 1.])
 
+# 表示一个空的点集合
 NULL_POINTS = np.array([[0., 0., 0.]])
 
-# Useful abbreviations for diagonals
+# 对角线方向的单位向量
 UL: Vect3 = UP + LEFT
 UR: Vect3 = UP + RIGHT
 DL: Vect3 = DOWN + LEFT
 DR: Vect3 = DOWN + RIGHT
 
+# 相对于窗口中心的顶部、底部、左侧、右侧的位置向量
 TOP: Vect3 = FRAME_Y_RADIUS * UP
 BOTTOM: Vect3 = FRAME_Y_RADIUS * DOWN
 LEFT_SIDE: Vect3 = FRAME_X_RADIUS * LEFT
 RIGHT_SIDE: Vect3 = FRAME_X_RADIUS * RIGHT
 
+# 分别表示圆周率π、圆周率的两倍τ、一个角度的弧度值、一个弧度的角度值
 PI: float = np.pi
-TAU: float = 2 * PI
-DEGREES: float = TAU / 360
-# Nice to have a constant for readability
-# when juxtaposed with expressions like 30 * DEGREES
-RADIANS: float = 1
+TAU: float = 2 * PI # ≈ 6.2831
+DEGREES: float = TAU / 360 # ≈ 0.0175 表示1°的角对应约0.0175的弧度值
+# 当与 30 * DEGREES 等表达式并置时，有一个常量以提高可读性是件好事
+RADIANS: float = 1 # 1的弧度对应约57.2958的角度值
 
+# ffmpeg可执行文件的路径
 FFMPEG_BIN: str = "ffmpeg"
 
+# 将不同类型的线段连接方式与数字进行映射，这些数字用于表示线段的连接方式
 JOINT_TYPE_MAP: dict = {
+    # 无连接，线段之间没有特殊的连接方式
     "no_joint": 0,
+    # 自动连接，线段之间以自动连接的方式连接
     "auto": 1,
+    # 斜角连接，线段之间以斜角相连接
     "bevel": 2,
+    # 斜接连接，当线段之间的角度很小或很尖时，会以尖角相接
     "miter": 3,
 }
 
-# Related to Text
+# 关于文本
+
+# 用于指定文本的样式，例如正常、斜体、倾斜或粗体
 NORMAL: str = "NORMAL"
 ITALIC: str = "ITALIC"
 OBLIQUE: str = "OBLIQUE"
 BOLD: str = "BOLD"
 
+# 默认的描边宽度，用于指定文本等对象的描边宽度
 DEFAULT_STROKE_WIDTH: float = 4
 
-# For keyboard interactions
+# 用于键盘交互的特殊键的Unicode符号码，包括Ctrl、Shift、Command、Delete和箭头键等
 CTRL_SYMBOL: int = 65508
 SHIFT_SYMBOL: int = 65505
 COMMAND_SYMBOL: int = 65517
 DELETE_SYMBOL: int = 65288
 ARROW_SYMBOLS: list[int] = list(range(65361, 65365))
 
+# 用于键盘交互的修饰键，分别表示Shift、Ctrl和Command修饰键的值
 SHIFT_MODIFIER: int = 1
 CTRL_MODIFIER: int = 2
 COMMAND_MODIFIER: int = 64
 
-# Colors
+# 关于颜色
 
+# 颜色大全
 BLUE_E: ManimColor = "#1C758A"
 BLUE_D: ManimColor = "#29ABCA"
 BLUE_C: ManimColor = "#58C4DD"
@@ -148,8 +174,16 @@ LIGHT_PINK: ManimColor = "#DC75CD"
 GREEN_SCREEN: ManimColor = "#00FF00"
 ORANGE: ManimColor = "#FF862F"
 
+# 预定义的一组颜色值
 MANIM_COLORS: List[ManimColor] = [
-    BLACK, GREY_E, GREY_D, GREY_C, GREY_B, GREY_A, WHITE,
+    BLACK, 
+    WHITE,
+    GREY_BROWN, 
+    DARK_BROWN, 
+    LIGHT_BROWN,
+    PINK, 
+    LIGHT_PINK,
+    GREY_E, GREY_D, GREY_C, GREY_B, GREY_A, 
     BLUE_E, BLUE_D, BLUE_C, BLUE_B, BLUE_A,
     TEAL_E, TEAL_D, TEAL_C, TEAL_B, TEAL_A,
     GREEN_E, GREEN_D, GREEN_C, GREEN_B, GREEN_A,
@@ -158,11 +192,9 @@ MANIM_COLORS: List[ManimColor] = [
     RED_E, RED_D, RED_C, RED_B, RED_A,
     MAROON_E, MAROON_D, MAROON_C, MAROON_B, MAROON_A,
     PURPLE_E, PURPLE_D, PURPLE_C, PURPLE_B, PURPLE_A,
-    GREY_BROWN, DARK_BROWN, LIGHT_BROWN,
-    PINK, LIGHT_PINK,
 ]
 
-# Abbreviated names for the "median" colors
+# 采用中间色调作为简写的颜色名称
 BLUE: ManimColor = BLUE_C
 TEAL: ManimColor = TEAL_C
 GREEN: ManimColor = GREEN_C
@@ -173,4 +205,6 @@ MAROON: ManimColor = MAROON_C
 PURPLE: ManimColor = PURPLE_C
 GREY: ManimColor = GREY_C
 
+# 经常使用的颜色，包括淡蓝色、绿色、黄色和红色
 COLORMAP_3B1B: List[ManimColor] = [BLUE_E, GREEN, YELLOW, RED]
+
