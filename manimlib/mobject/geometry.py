@@ -45,7 +45,8 @@ DEFAULT_ARROW_TIP_LENGTH = 0.35
 DEFAULT_ARROW_TIP_WIDTH = 0.35
 
 
-# Deprecate?
+# 弃用？
+# 具有提示功能的图形类
 class TipableVMobject(VMobject):
     """
     Meant for shared functionality between Arc and Line.
@@ -63,10 +64,29 @@ class TipableVMobject(VMobject):
         * Getters
             - Straightforward accessors, returning information pertaining
                 to the TipableVMobject instance's tip(s), its length etc
+
+    用于圆弧和直线之间的共享功能。
+    功能可大致分为以下几组：
+
+        * 添加、创建、修改提示
+            - add_tip 在推送新提示之前调用 create_tip
+                进入 TipableVMobject 的子对象列表
+            - 风格和位置配置
+
+        * 检查提示
+            - 布尔检查 TipableVM 对象是否有提示
+                和一个起始提示
+
+        *吸气剂
+            - 简单的访问器，返回相关信息
+                TipableVMobject 实例的提示、长度等
     """
     tip_config: dict = dict(
+        # 填充不透明度
         fill_opacity=1.0,
+        # 描边宽度
         stroke_width=0.0,
+        # 提示的样式，通常有三种选择：三角形、内部平滑和点
         tip_style=0.0,  # triangle=0, inner_smooth=1, dot=2
     )
 
