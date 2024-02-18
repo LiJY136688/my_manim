@@ -60,7 +60,28 @@ RESET_FRAME_KEY = 'r'
 # 退出交互模式
 QUIT_KEY = 'q'
 
+# （修改文件后）重新运行场景的处理器类
+class RerunSceneHandler(FileSystemEventHandler):
+    #
+    def __init__(self, queue):
+        super().__init__()
+        self.queue = queue
+    # 当文件或目录被修改时调用
+    def on_modified(self, event):
+        # 将重新运行场景的指令放入队列中
+        self.queue.put(("rerun_file", [], {}))
+        # 事件包括DirModifiedEvent（目录修改事件）或FileModifiedEvent（文件修改事件）
 
+
+# Scene是动画的画布，它提供了管理图形对象和动画的工具。通常，一个manim脚本包含一个继承自Scene的类，用户会在这个类中重写Scene.construct方法。
+# 通过调用Scene.add可以将图形对象显示在屏幕上，通过调用Scene.remove可以将图形对象从屏幕上移除。所有当前在屏幕上的图形对象都存储在Scene.mobjects属性中。通过调用Scene.play可以播放动画。
+# Scene内部通过调用Scene.render来进行渲染。这个过程中会依次调用Scene.setup、Scene.construct和Scene.tear_down。
+# 不建议在用户自定义的Scene中重写__init__方法。如果需要在Scene渲染之前运行一些代码，可以使用Scene.setup方法。
+# 示例代码：
+#         class MyScene(Scene):
+#             def construct(self):
+#                 self.play(Write(Text("Hello World!")))
+# 场景类
 class Scene(object):
     # 随机种子，初始为0
     random_seed: int = 0
