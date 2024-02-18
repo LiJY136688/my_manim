@@ -740,16 +740,22 @@ class Scene(object):
 
         self.num_plays += 1
 
+
     def begin_animations(self, animations: Iterable[Animation]) -> None:
         for animation in animations:
             animation.begin()
-            # Anything animated that's not already in the
-            # scene gets added to the scene.  Note, for
-            # animated mobjects that are in the family of
-            # those on screen, this can result in a restructuring
-            # of the scene.mobjects list, which is usually desired.
+        # 场景中尚未存在的任何动画都会添加到场景中。
+        # 请注意，对于屏幕上的动画 mobject 系列，这可能会导致 scene.mobjects 列表的重组，这通常是需要的。
             if animation.mobject not in self.mobjects:
                 self.add(animation.mobject)
+    # 在场景中开始动画的方法。它遍历场景中的所有动画对象，并逐个开始它们的动画。
+    # 如果使用的渲染器是CAIRO，它会将所有不移动的对象绘制到屏幕上，因此他们不必每一帧都重新渲染。
+    def begin_animations(self) -> None:
+        for animation in self.animations:
+            animation._setup_scene(self)
+            animation.begin()
+        if config.renderer == RendererType.CAIRO:
+            (self.moving_mobjects, self.static_mobjects,) = self.get_moving_and_static_mobjects(self.animations)
 
     def progress_through_animations(self, animations: Iterable[Animation]) -> None:
         last_t = 0
