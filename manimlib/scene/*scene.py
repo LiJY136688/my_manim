@@ -156,16 +156,19 @@ class Scene:
         self.renderer.init_scene(self)
 
         self.mobjects = []
-        # TODO, remove need for foreground mobjects
+        # 待办, 消除对前台对象的需要
         self.foreground_mobjects = []
+        # 如果提供了random_seed，则会使用该种子来初始化Python的random模块和numpy库的随机数生成器
+        # 这可以确保在每次运行时生成的随机数序列相同，从而使得随机性可复现
         if self.random_seed is not None:
             random.seed(self.random_seed)
             np.random.seed(self.random_seed)
 
-    @property
+    @property # 用于获取renderer.camera属性的装饰器，可以将一个方法定义为类的属性，使得在访问这个方法时可以像访问属性一样，不需要使用()来调用方法
     def camera(self):
         return self.renderer.camera
 
+    # 深拷贝
     def __deepcopy__(self, clone_from_id):
         cls = self.__class__
         result = cls.__new__(cls)
@@ -344,6 +347,7 @@ class Scene:
         """
         return [getattr(self, key) for key in keys]
 
+    # 更新场景中的所有物体
     def update_mobjects(self, dt: float):
         """
         Begins updating all mobjects in the Scene.
@@ -880,6 +884,8 @@ class Scene:
         )
         return all_moving_mobject_families, static_mobjects
 
+    # 将传入的动画参数转换为适用于播放的动画对象
+    # 从动画构建器中创建动画方法并更新动画
     def compile_animations(
         self,
         *args: Animation | Iterable[Animation] | types.GeneratorType[Animation],
@@ -910,8 +916,7 @@ class Scene:
             except TypeError:
                 if inspect.ismethod(arg):
                     raise TypeError(
-                        "Passing Mobject methods to Scene.play is no longer"
-                        " supported. Use Mobject.animate instead.",
+                        "向Scene.play中传递物体方法已经被弃用。请使用Mobject.animate。",
                     )
                 else:
                     raise TypeError(
@@ -1024,6 +1029,7 @@ class Scene:
         )
         return time_progression
 
+    # 获取动画列表的总运行时间
     def get_run_time(self, animations: list[Animation]):
         """
         Gets the total run time for a list of animations.
@@ -1046,36 +1052,20 @@ class Scene:
         else:
             return np.max([animation.run_time for animation in animations])
 
+    # 在此场景中播放动画
     def play(
         self,
+        # 动画对象或动画对象的可迭代集合，用于指定要播放的动画
         *args: Animation | Iterable[Animation] | types.GeneratorType[Animation],
+        # 要添加的外部子标题的内容
         subcaption=None,
+        # 添加的子标题显示时间。如果为None，则取动画的运行时间
         subcaption_duration=None,
+        # 子标题的开始时间的偏移量（以秒为单位）
         subcaption_offset=0,
         **kwargs,
     ):
-        r"""Plays an animation in this scene.
-
-        Parameters
-        ----------
-
-        args
-            Animations to be played.
-        subcaption
-            The content of the external subcaption that should
-            be added during the animation.
-        subcaption_duration
-            The duration for which the specified subcaption is
-            added. If ``None`` (the default), the run time of the
-            animation is taken.
-        subcaption_offset
-            An offset (in seconds) for the start time of the
-            added subcaption.
-        kwargs
-            All other keywords are passed to the renderer.
-
-        """
-        # If we are in interactive embedded mode, make sure this is running on the main thread (required for OpenGL)
+        # 如果在交互式嵌入模式下，并且渲染器为OpenGL，则需要确保此方法在主线程上运行（这对于OpenGL是必需的）
         if (
             self.interactive_mode
             and config.renderer == RendererType.OPENGL
@@ -1088,6 +1078,7 @@ class Scene:
                     "subcaption_offset": subcaption_offset,
                 }
             )
+            # 如果不是主线程，则将任务放入队列以在主线程上运行，并且更新关键字参数以包含子标题相关信息
             self.queue.put(
                 (
                     "play",
@@ -1100,46 +1091,33 @@ class Scene:
         start_time = self.renderer.time
         self.renderer.play(self, *args, **kwargs)
         run_time = self.renderer.time - start_time
+        # 如果提供了subcaption参数，则在动画播放后添加子标题，其开始时间需要根据动画的运行时间进行偏移
         if subcaption:
+            # 检查是否指定了子标题的持续时间
             if subcaption_duration is None:
+                # 如果没有指定持续时间，则默认为动画的运行时间
                 subcaption_duration = run_time
-            # The start of the subcaption needs to be offset by the
-            # run_time of the animation because it is added after
-            # the animation has already been played (and Scene.renderer.time
-            # has already been updated).
+            # 将子标题添加到当前场景
+            # 需要注意的是，子标题的开始时间需要根据动画的运行时间做相应的偏移，以确保子标题在适当的时机显示出来
             self.add_subcaption(
                 content=subcaption,
                 duration=subcaption_duration,
                 offset=-run_time + subcaption_offset,
             )
 
+    # 播放一个“无操作”的动画，即暂停执行并显示静止帧
     def wait(
         self,
+        # 动画的运行时间
         duration: float = DEFAULT_WAIT_TIME,
+        # 无参函数，用于在每次渲染帧时评估
+        # 只有当函数的返回值为真时，或者超过 duration 指定的时间时，动画才会停止
         stop_condition: Callable[[], bool] | None = None,
+        # 控制是否冻结帧。如果为 True，则更新器函数不会被调用，动画输出一个静止的帧
+        # 如果为 False，则更新器函数会被调用，帧会像平常一样被渲染
+        # 如果为 None（默认值），则场景会尝试自行确定帧是否应该被冻结
         frozen_frame: bool | None = None,
     ):
-        """Plays a "no operation" animation.
-
-        Parameters
-        ----------
-        duration
-            The run time of the animation.
-        stop_condition
-            A function without positional arguments that is evaluated every time
-            a frame is rendered. The animation only stops when the return value
-            of the function is truthy, or when the time specified in ``duration``
-            passes.
-        frozen_frame
-            If True, updater functions are not evaluated, and the animation outputs
-            a frozen frame. If False, updater functions are called and frames
-            are rendered as usual. If None (the default), the scene tries to
-            determine whether or not the frame is frozen on its own.
-
-        See also
-        --------
-        :class:`.Wait`, :meth:`.should_mobjects_update`
-        """
         self.play(
             Wait(
                 run_time=duration,
@@ -1148,34 +1126,21 @@ class Scene:
             )
         )
 
+    # 暂停场景（即显示冻结的帧）
     def pause(self, duration: float = DEFAULT_WAIT_TIME):
-        """Pauses the scene (i.e., displays a frozen frame).
-
-        This is an alias for :meth:`.wait` with ``frozen_frame``
-        set to ``True``.
-
-        Parameters
-        ----------
-        duration
-            The duration of the pause.
-
-        See also
-        --------
-        :meth:`.wait`, :class:`.Wait`
-        """
+        # 实际上是 wait 方法的一个别名，只是在调用 wait 方法时将 frozen_frame 参数设置为 True
+        # 这样，调用 pause 方法时就会等同于调用 wait 方法并指定 frozen_frame=True
+        # 参数 duration 指定了暂停的持续时间，即静止帧的显示时间
         self.wait(duration=duration, frozen_frame=True)
 
-    def wait_until(self, stop_condition: Callable[[], bool], max_time: float = 60):
-        """Wait until a condition is satisfied, up to a given maximum duration.
-
-        Parameters
-        ----------
-        stop_condition
-            A function with no arguments that determines whether or not the
-            scene should keep waiting.
-        max_time
-            The maximum wait time in seconds.
-        """
+    # 等待直到满足条件，直至达到给定的最大持续时间
+    def wait_until(
+        self, 
+        # 无参函数，用于确定场景是否应该继续等待
+        stop_condition: Callable[[], bool], 
+        # 最大等待时间，以秒为单位
+        max_time: float = 60
+        ):
         self.wait(max_time, stop_condition=stop_condition)
 
     def compile_animation_data(
@@ -1458,7 +1423,9 @@ class Scene:
         if self.renderer.window.is_closing:
             self.renderer.window.destroy()
 
+    # 在 Manim 中嵌入 IPython 交互式 shell 的功能
     def embed(self):
+        # 检查当前是否处于预览模式（即未将动画渲染到文件）以及 IPython 是否可用
         if not config["preview"]:
             logger.warning("Called embed() while no preview window is available.")
             return
@@ -1466,22 +1433,22 @@ class Scene:
             logger.warning("embed() is skipped while writing to a file.")
             return
 
+        # 设置动画的起始时间为 0
         self.renderer.animation_start_time = 0
         self.renderer.render(self, -1, self.moving_mobjects)
 
-        # Configure IPython shell.
+        # 创建了一个 IPython 的交互式 shell
         from IPython.terminal.embed import InteractiveShellEmbed
-
         shell = InteractiveShellEmbed()
 
-        # Have the frame update after each command
+        # 在 IPython shell 中，每次运行单元格后，都会调用 render 方法来更新动画
         shell.events.register(
             "post_run_cell",
             lambda *a, **kw: self.renderer.render(self, -1, self.moving_mobjects),
         )
 
-        # Use the locals of the caller as the local namespace
-        # once embedded, and add a few custom shortcuts.
+        # 将一些 Manim 中常用的方法添加到了 IPython shell 的本地命名空间中
+        # 这样用户可以直接在 IPython 中调用这些方法
         local_ns = inspect.currentframe().f_back.f_locals
         # local_ns["touch"] = self.interact
         for method in (
@@ -1497,9 +1464,10 @@ class Scene:
             local_ns[method] = getattr(self, method)
         shell(local_ns=local_ns, stack_depth=2)
 
-        # End scene when exiting an embed.
+        # 当退出嵌入式环境时，通过引发异常来结束场景
         raise Exception("Exiting scene.")
 
+    # 更新场景到指定的时间点
     def update_to_time(self, t):
         dt = t - self.last_t
         self.last_t = t
@@ -1507,106 +1475,77 @@ class Scene:
             animation.update_mobjects(dt)
             alpha = t / animation.run_time
             animation.interpolate(alpha)
+        # 更新物体    
         self.update_mobjects(dt)
+        # 更新网格
         self.update_meshes(dt)
+        # 更新场景本身
         self.update_self(dt)
 
     def add_subcaption(
         self, content: str, duration: float = 1, offset: float = 0
     ) -> None:
-        r"""Adds an entry in the corresponding subcaption file
-        at the current time stamp.
+        # 在相应的子字幕文件中添加一个包含当前时间戳的条目
+        # 当前时间戳是在``Scene.renderer.time``中获得的
+        # 此示例说明了向动画添加子标题的两种可能性：
+        #    class SubcaptionExample(Scene):
+        #        def construct(self):
+        #            square = Square()
+        #            circle = Circle()
 
-        The current time stamp is obtained from ``Scene.renderer.time``.
+                    # 法一: 通过 add_subcaption 
+        #            self.add_subcaption("Hello square!", duration=1)
+        #            self.play(Create(square))
 
-        Parameters
-        ----------
-
-        content
-            The subcaption content.
-        duration
-            The duration (in seconds) for which the subcaption is shown.
-        offset
-            This offset (in seconds) is added to the starting time stamp
-            of the subcaption.
-
-        Examples
-        --------
-
-        This example illustrates both possibilities for adding
-        subcaptions to Manimations::
-
-            class SubcaptionExample(Scene):
-                def construct(self):
-                    square = Square()
-                    circle = Circle()
-
-                    # first option: via the add_subcaption method
-                    self.add_subcaption("Hello square!", duration=1)
-                    self.play(Create(square))
-
-                    # second option: within the call to Scene.play
-                    self.play(
-                        Transform(square, circle),
-                        subcaption="The square transforms."
-                    )
-
-        """
+                    # 法二: 在对 Scene.play 的调用中
+        #            self.play(
+        #                Transform(square, circle),
+        #                subcaption="The square transforms."
+        #            )
         subtitle = srt.Subtitle(
             index=len(self.renderer.file_writer.subcaptions),
+            # 要添加的字幕内容
             content=content,
+            # 开始时间
             start=datetime.timedelta(seconds=float(self.renderer.time + offset)),
+            # 结束时间
             end=datetime.timedelta(
                 seconds=float(self.renderer.time + offset + duration)
             ),
         )
+        # 将这个对象添加到场景的字幕列表中
         self.renderer.file_writer.subcaptions.append(subtitle)
 
-    # 添加声音
+    # 向动画中添加声音
     def add_sound(
         self,
+        # 声音文件的路径
         sound_file: str,
+        # 声音文件中的偏移时间
         time_offset: float = 0,
+        # 增益参数，用于放大声音
         gain: float | None = None,
         **kwargs,
     ):
-        """
-        This method is used to add a sound to the animation.
+        # 示例（非自动播放）
+    #    class SoundExample(Scene):
+    #        def construct(self):
+    #            dot = Dot().set_color(GREEN)
+    #            self.add_sound("click.wav")
+    #            self.add(dot)
+    #            self.wait()
+    #            self.add_sound("click.wav")
+    #            dot.set_color(BLUE)
+    #            self.wait()
+    #            self.add_sound("click.wav")
+    #            dot.set_color(RED)
+    #            self.wait()
 
-        Parameters
-        ----------
-
-        sound_file
-            The path to the sound file.
-        time_offset
-            The offset in the sound file after which
-            the sound can be played.
-        gain
-            Amplification of the sound.
-
-        Examples
-        --------
-        .. manim:: SoundExample
-            :no_autoplay:
-
-            class SoundExample(Scene):
-                # Source of sound under Creative Commons 0 License. https://freesound.org/people/Druminfected/sounds/250551/
-                def construct(self):
-                    dot = Dot().set_color(GREEN)
-                    self.add_sound("click.wav")
-                    self.add(dot)
-                    self.wait()
-                    self.add_sound("click.wav")
-                    dot.set_color(BLUE)
-                    self.wait()
-                    self.add_sound("click.wav")
-                    dot.set_color(RED)
-                    self.wait()
-
-        Download the resource for the previous example `here <https://github.com/ManimCommunity/manim/blob/main/docs/source/_static/click.wav>`_ .
-        """
+        # 声音源文件地址 https://github.com/ManimCommunity/manim/blob/main/docs/source/_static/click.wav
+        # 检查是否应该跳过动画渲染
         if self.renderer.skip_animations:
             return
+        # 计算出声音应该播放的时间点（当前渲染时间加上偏移量）
         time = self.renderer.time + time_offset
         self.renderer.file_writer.add_sound(sound_file, time, gain, **kwargs)
 
